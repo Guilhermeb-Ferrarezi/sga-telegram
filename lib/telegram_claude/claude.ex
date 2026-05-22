@@ -17,8 +17,7 @@ defmodule TelegramClaude.Claude do
 
     opts = [
       cd: project_dir,
-      stderr: :string,
-      timeout: @timeout
+      stderr_to_stdout: true
     ]
 
     case System.cmd(claude_bin, args, opts) do
