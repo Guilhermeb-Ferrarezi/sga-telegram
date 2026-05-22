@@ -1,8 +1,11 @@
-FROM oven/bun:alpine AS base
+FROM elixir:1.17-alpine AS builder
 
-RUN apk add --no-cache elixir erlang git curl
+RUN apk add --no-cache git curl bash
 
-FROM base AS builder
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH="/root/.bun/bin:$PATH"
+
+RUN bun install -g @anthropic-ai/claude-code
 
 WORKDIR /app
 
@@ -17,11 +20,16 @@ COPY lib lib
 
 RUN MIX_ENV=prod mix compile
 
-FROM base
+FROM elixir:1.17-alpine
 
-WORKDIR /app
+RUN apk add --no-cache git curl bash
+
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH="/root/.bun/bin:$PATH"
 
 RUN bun install -g @anthropic-ai/claude-code
+
+WORKDIR /app
 
 COPY --from=builder /root/.mix /root/.mix
 COPY --from=builder /app/_build /app/_build
