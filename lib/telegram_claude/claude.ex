@@ -6,7 +6,12 @@ defmodule TelegramClaude.Claude do
     project_env = load_dotenv(project_dir)
 
     custom_env = Map.new([{"CLAUDE_PROMPT", prompt} | project_env])
-    merged_env = System.get_env() |> Map.merge(custom_env) |> Map.to_list()
+
+    merged_env =
+      System.get_env()
+      |> Map.merge(custom_env)
+      |> Enum.filter(fn {k, v} -> is_binary(k) and is_binary(v) end)
+      |> Enum.map(fn {k, v} -> {String.to_charlist(k), String.to_charlist(v)} end)
 
     cmd = "#{claude_bin} -p \"$CLAUDE_PROMPT\" --output-format text --allowedTools all --dangerously-skip-permissions < /dev/null"
 
