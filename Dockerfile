@@ -1,6 +1,6 @@
 FROM elixir:1.19-alpine AS builder
 
-RUN apk add --no-cache git nodejs npm
+RUN apk add --no-cache git nodejs npm build-base
 
 WORKDIR /app
 
@@ -39,6 +39,7 @@ COPY --from=builder /app/lib /app/lib
 COPY --from=builder /app/mix.exs /app/mix.exs
 COPY --from=builder /app/mix.lock /app/mix.lock
 COPY config config
+COPY priv priv
 COPY entrypoint.sh /entrypoint.sh
 COPY CLAUDE.md /app/CLAUDE.md
 

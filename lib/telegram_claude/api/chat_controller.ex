@@ -63,6 +63,26 @@ defmodule TelegramClaude.API.ChatController do
     end
   end
 
+  def get_history(conn, _params) do
+    case TelegramClaude.API.Session.get(conn) do
+      nil ->
+        conn |> put_resp_content_type("application/json") |> send_resp(401, ~s({"error":"unauthenticated"}))
+
+      session ->
+        chat_id = "web_#{session["login"]}"
+        messages = TelegramClaude.History.get_for_api(chat_id)
+
+        json =
+          messages
+          |> Enum.map(fn m ->
+            %{id: Integer.to_string(m.id), role: m.role, content: m.content}
+          end)
+          |> Jason.encode!()
+
+        conn |> put_resp_content_type("application/json") |> send_resp(200, json)
+    end
+  end
+
   def clear_history(conn, _params) do
     case TelegramClaude.API.Session.get(conn) do
       nil ->

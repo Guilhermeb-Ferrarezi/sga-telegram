@@ -31,6 +31,7 @@ defmodule TelegramClaude.API.Router do
 
   # Chat
   post "/api/chat", do: ChatController.stream(conn, conn.body_params)
+  get "/api/chat/history", do: ChatController.get_history(conn, %{})
   delete "/api/chat/history", do: ChatController.clear_history(conn, %{})
 
   # Frontend SPA — serve index.html for all non-API routes

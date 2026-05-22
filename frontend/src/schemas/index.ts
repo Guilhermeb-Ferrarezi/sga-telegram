@@ -36,6 +36,8 @@ export const MessageSchema = z.object({
   streaming: z.boolean().optional(),
 })
 
+export const HistoryResponseSchema = z.array(MessageSchema)
+
 export type Message = z.infer<typeof MessageSchema>
 
 export const SSEEventSchema = z.discriminatedUnion('type', [

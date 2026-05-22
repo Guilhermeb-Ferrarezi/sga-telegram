@@ -14,3 +14,6 @@ config :telegram_claude,
   github_client_secret: System.get_env("GITHUB_CLIENT_SECRET", ""),
   github_redirect_uri: System.get_env("GITHUB_REDIRECT_URI", "http://localhost:4000/api/auth/github/callback"),
   frontend_url: System.get_env("FRONTEND_URL", "/dashboard")
+
+config :telegram_claude, TelegramClaude.Repo,
+  database: System.get_env("DB_PATH", "/home/app/.claude/history.db")

@@ -3,7 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { PaperPlaneTilt, Trash, ArrowLeft, CircleNotch, Wrench } from '@phosphor-icons/react'
 import { api } from '@/lib/api'
-import { ProjectStatusSchema, UserSchema, SSEEventSchema } from '@/schemas'
+import { ProjectStatusSchema, UserSchema, SSEEventSchema, HistoryResponseSchema } from '@/schemas'
 import type { Message } from '@/schemas'
 import Navbar from '@/components/Navbar'
 import ChatMessage from '@/components/ChatMessage'
@@ -15,6 +15,7 @@ export default function ChatPage() {
   const navigate = useNavigate()
 
   const [messages, setMessages] = useState<Message[]>([])
+  const [historyLoaded, setHistoryLoaded] = useState(false)
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
@@ -33,13 +34,29 @@ export default function ChatPage() {
     staleTime: Infinity,
   })
 
+  useQuery({
+    queryKey: ['chat', 'history'],
+    queryFn: async () => {
+      const data = HistoryResponseSchema.parse((await api.get('/api/chat/history')).data)
+      if (!historyLoaded) {
+        setMessages(data)
+        setHistoryLoaded(true)
+      }
+      return data
+    },
+    staleTime: Infinity,
+  })
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, status])
 
   const clearMutation = useMutation({
     mutationFn: () => api.delete('/api/chat/history'),
-    onSuccess: () => setMessages([]),
+    onSuccess: () => {
+      setMessages([])
+      setHistoryLoaded(false)
+    },
   })
 
   async function sendMessage() {

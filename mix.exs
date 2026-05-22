@@ -25,7 +25,9 @@ defmodule TelegramClaude.MixProject do
       {:req, "~> 0.5"},
       {:bandit, "~> 1.5"},
       {:plug, "~> 1.16"},
-      {:plug_crypto, "~> 2.1"}
+      {:plug_crypto, "~> 2.1"},
+      {:ecto_sqlite3, "~> 0.17"},
+      {:ecto, "~> 3.12"}
     ]
   end
 end

@@ -1,22 +1,37 @@
 defmodule TelegramClaude.History do
-  use Agent
+  import Ecto.Query
+  alias TelegramClaude.{Repo, Message}
 
-  @max_messages 10
+  @max_context 20
+  @assistant_preview 500
 
-  def start_link(_opts) do
-    Agent.start_link(fn -> %{} end, name: __MODULE__)
-  end
+  def add(chat_id, role, content) do
+    %Message{}
+    |> Ecto.Changeset.change(
+      chat_id: to_string(chat_id),
+      role: to_string(role),
+      content: content
+    )
+    |> Repo.insert()
 
-  def add(chat_id, role, text) do
-    Agent.update(__MODULE__, fn state ->
-      history = Map.get(state, chat_id, [])
-      trimmed = Enum.take(history ++ [{role, text}], -@max_messages)
-      Map.put(state, chat_id, trimmed)
-    end)
+    :ok
   end
 
   def get(chat_id) do
-    Agent.get(__MODULE__, fn state -> Map.get(state, chat_id, []) end)
+    Message
+    |> where([m], m.chat_id == ^to_string(chat_id))
+    |> order_by([m], asc: m.inserted_at)
+    |> limit(@max_context)
+    |> select([m], {m.role, m.content})
+    |> Repo.all()
+    |> Enum.map(fn {role, content} -> {String.to_atom(role), content} end)
+  end
+
+  def get_for_api(chat_id) do
+    Message
+    |> where([m], m.chat_id == ^to_string(chat_id))
+    |> order_by([m], asc: m.inserted_at)
+    |> Repo.all()
   end
 
   def format(chat_id) do
@@ -24,12 +39,16 @@ defmodule TelegramClaude.History do
     |> get()
     |> Enum.map(fn
       {:user, text} -> "Usuário: #{text}"
-      {:assistant, text} -> "Assistente: #{String.slice(text, 0, 300)}"
+      {:assistant, text} -> "Assistente: #{String.slice(text, 0, @assistant_preview)}"
     end)
     |> Enum.join("\n")
   end
 
   def clear(chat_id) do
-    Agent.update(__MODULE__, &Map.delete(&1, chat_id))
+    Message
+    |> where([m], m.chat_id == ^to_string(chat_id))
+    |> Repo.delete_all()
+
+    :ok
   end
 end
