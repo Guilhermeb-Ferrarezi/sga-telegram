@@ -57,7 +57,7 @@ defmodule TelegramClaude.AuthFlow do
       {^port, {:exit_status, 0}} ->
         System.cmd("sh", [
           "-c",
-          "[ -f /root/.claude.json ] && cp /root/.claude.json /root/.claude/backups/.claude.json.backup.$(date +%s) || true"
+          "[ -f /home/app/.claude.json ] && cp /home/app/.claude.json /home/app/.claude/backups/.claude.json.backup.$(date +%s) || true"
         ])
 
         TelegramClaude.Telegram.send_message(chat_id, "✅ Autenticado! Bot pronto para uso.")

@@ -17,11 +17,12 @@ RUN MIX_ENV=prod mix compile
 
 FROM elixir:1.19-alpine
 
-RUN apk add --no-cache git nodejs npm gettext
+RUN apk add --no-cache git nodejs npm gettext && \
+    adduser -D -h /home/app -s /bin/sh app
 
 WORKDIR /app
 
-COPY --from=builder /root/.mix /root/.mix
+COPY --from=builder /root/.mix /home/app/.mix
 COPY --from=builder /app/_build /app/_build
 COPY --from=builder /app/deps /app/deps
 COPY --from=builder /app/lib /app/lib
@@ -31,11 +32,16 @@ COPY config config
 COPY entrypoint.sh /entrypoint.sh
 COPY CLAUDE.md /app/CLAUDE.md
 
-RUN chmod +x /entrypoint.sh && mkdir -p /app/project /data/npm-global
+RUN chmod +x /entrypoint.sh && \
+    mkdir -p /app/project /data/npm-global /home/app/.claude/backups && \
+    chown -R app:app /app /data/npm-global /home/app
 
+ENV HOME=/home/app
 ENV NPM_CONFIG_PREFIX=/data/npm-global
 ENV PATH="/data/npm-global/bin:$PATH"
 ENV MIX_ENV=prod
 ENV SHELL=/bin/sh
+
+USER app
 
 CMD ["/entrypoint.sh"]

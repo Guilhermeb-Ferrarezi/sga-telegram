@@ -13,11 +13,11 @@ if [ ! -f "$NPM_GLOBAL/bin/claude" ]; then
 fi
 
 # Restaurar .claude.json do volume se necessario
-if [ ! -f /root/.claude.json ]; then
-  BACKUP=$(ls -t /root/.claude/backups/.claude.json.backup.* 2>/dev/null | head -1)
+if [ ! -f /home/app/.claude.json ]; then
+  BACKUP=$(ls -t /home/app/.claude/backups/.claude.json.backup.* 2>/dev/null | head -1)
   if [ -n "$BACKUP" ]; then
     echo "[entrypoint] Restaurando auth do Claude de $BACKUP"
-    cp "$BACKUP" /root/.claude.json
+    cp "$BACKUP" /home/app/.claude.json
   else
     echo "[entrypoint] AVISO: sem auth do Claude. Acesse o terminal e rode 'claude' para fazer login."
   fi
