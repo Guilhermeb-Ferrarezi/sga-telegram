@@ -35,7 +35,7 @@ defmodule TelegramClaude.API.Router do
 
   # Frontend SPA — serve index.html for all non-API routes
   get _ do
-    static_path = Application.get_env(:telegram_claude, :static_path, "/app/frontend/dist")
+    static_path = Application.get_env(:telegram_claude, :static_path, "/app/priv/static")
     index = Path.join(static_path, "index.html")
 
     case File.read(index) do
