@@ -10,10 +10,12 @@ defmodule TelegramClaude.Claude do
 
     Logger.info("Executando claude: #{prompt}")
 
+    project_env = load_dotenv(project_dir)
+
     opts = [
       cd: project_dir,
       stderr_to_stdout: true,
-      env: [{"CLAUDE_PROMPT", prompt}]
+      env: [{"CLAUDE_PROMPT", prompt} | project_env]
     ]
 
     case System.cmd("sh", ["-c", cmd], opts) do
@@ -28,5 +30,25 @@ defmodule TelegramClaude.Claude do
     e ->
       Logger.error("Erro ao executar claude: #{inspect(e)}")
       {:error, "Falha ao executar claude"}
+  end
+
+  defp load_dotenv(project_dir) do
+    path = Path.join(project_dir, ".env")
+
+    case File.read(path) do
+      {:ok, contents} ->
+        contents
+        |> String.split("\n", trim: true)
+        |> Enum.reject(&String.starts_with?(&1, "#"))
+        |> Enum.flat_map(fn line ->
+          case String.split(line, "=", parts: 2) do
+            [key, value] -> [{String.trim(key), String.trim(value)}]
+            _ -> []
+          end
+        end)
+
+      {:error, _} ->
+        []
+    end
   end
 end

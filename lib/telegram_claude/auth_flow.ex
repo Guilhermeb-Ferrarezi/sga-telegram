@@ -11,6 +11,7 @@ defmodule TelegramClaude.AuthFlow do
         Port.open({:spawn_executable, claude_bin}, [
           :binary,
           :stderr_to_stdout,
+          :exit_status,
           args: ["--print", "test"]
         ])
 
@@ -43,7 +44,7 @@ defmodule TelegramClaude.AuthFlow do
         TelegramClaude.Telegram.send_message(chat_id, "❌ Falha no auth. Tente `/auth` novamente.")
     after
       30_000 ->
-        Port.close(port)
+        safe_close(port)
         TelegramClaude.Telegram.send_message(chat_id, "⏱ Timeout aguardando URL de auth.")
     end
   end
@@ -54,7 +55,6 @@ defmodule TelegramClaude.AuthFlow do
         wait_for_done(port, chat_id)
 
       {^port, {:exit_status, 0}} ->
-        # Salvar backup do .claude.json no volume
         System.cmd("sh", [
           "-c",
           "[ -f /root/.claude.json ] && cp /root/.claude.json /root/.claude/backups/.claude.json.backup.$(date +%s) || true"
@@ -66,7 +66,17 @@ defmodule TelegramClaude.AuthFlow do
         :ok
     after
       300_000 ->
-        Port.close(port)
+        safe_close(port)
+    end
+  end
+
+  defp safe_close(port) do
+    try do
+      Port.close(port)
+    rescue
+      _ -> :ok
+    catch
+      _, _ -> :ok
     end
   end
 end
