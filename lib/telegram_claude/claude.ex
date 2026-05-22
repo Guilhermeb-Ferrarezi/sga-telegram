@@ -5,7 +5,7 @@ defmodule TelegramClaude.Claude do
     claude_bin = System.find_executable("claude") || "/data/npm-global/bin/claude"
     project_env = load_dotenv(project_dir)
 
-    cmd = "#{claude_bin} -p \"$CLAUDE_PROMPT\" --output-format text --allowedTools all < /dev/null"
+    cmd = "#{claude_bin} -p \"$CLAUDE_PROMPT\" --output-format text --allowedTools all --dangerously-skip-permissions < /dev/null"
 
     Logger.info("Executando claude: #{String.slice(prompt, 0, 100)}")
 
