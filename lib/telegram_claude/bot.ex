@@ -85,20 +85,13 @@ defmodule TelegramClaude.Bot do
     last_edit_ref = :atomics.new(1, [])
     :atomics.put(last_edit_ref, 1, :os.system_time(:millisecond))
 
-    on_update = fn
-      {:thinking, text} ->
-        now = :os.system_time(:millisecond)
-        if now - :atomics.get(last_edit_ref, 1) > 2000 do
-          :atomics.put(last_edit_ref, 1, now)
-          TelegramClaude.Telegram.edit_message(chat_id, msg_id, "💭 #{String.slice(text, 0, 200)}")
-        end
-
-      {:tool, tool} ->
-        now = :os.system_time(:millisecond)
-        if now - :atomics.get(last_edit_ref, 1) > 1000 do
-          :atomics.put(last_edit_ref, 1, now)
-          TelegramClaude.Telegram.edit_message(chat_id, msg_id, "🔧 Usando: `#{tool}`")
-        end
+    on_update = fn {:streaming, text} ->
+      now = :os.system_time(:millisecond)
+      if now - :atomics.get(last_edit_ref, 1) > 2000 do
+        :atomics.put(last_edit_ref, 1, now)
+        preview = text |> String.trim() |> String.slice(-800, 800)
+        TelegramClaude.Telegram.edit_message(chat_id, msg_id, "⏳\n#{preview}")
+      end
     end
 
     case TelegramClaude.Claude.run(full_prompt, project_dir, on_update) do
