@@ -14,7 +14,7 @@ defmodule TelegramClaude.Claude do
       |> Enum.map(fn {k, v} -> {String.to_charlist(k), String.to_charlist(v)} end)
 
     cmd =
-      "#{claude_bin} -p \"$CLAUDE_PROMPT\" --output-format stream-json --allowedTools all --dangerously-skip-permissions < /dev/null"
+      "#{claude_bin} -p \"$CLAUDE_PROMPT\" --output-format stream-json --verbose --include-partial-messages --allowedTools all --dangerously-skip-permissions < /dev/null"
 
     Logger.info("Executando claude: #{String.slice(prompt, 0, 100)}")
 
