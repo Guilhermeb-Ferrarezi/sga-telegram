@@ -1,11 +1,6 @@
 FROM elixir:1.17-alpine AS builder
 
-RUN apk add --no-cache git curl bash
-
-RUN curl -fsSL https://bun.sh/install | bash
-ENV PATH="/root/.bun/bin:$PATH"
-
-RUN bun install -g @anthropic-ai/claude-code
+RUN apk add --no-cache git nodejs npm
 
 WORKDIR /app
 
@@ -22,12 +17,8 @@ RUN MIX_ENV=prod mix compile
 
 FROM elixir:1.17-alpine
 
-RUN apk add --no-cache git curl bash
-
-RUN curl -fsSL https://bun.sh/install | bash
-ENV PATH="/root/.bun/bin:$PATH"
-
-RUN bun install -g @anthropic-ai/claude-code
+RUN apk add --no-cache git nodejs npm && \
+    npm install -g @anthropic-ai/claude-code
 
 WORKDIR /app
 
