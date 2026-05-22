@@ -48,22 +48,23 @@ defmodule TelegramClaude.Bot do
 
         if String.starts_with?(text, mention) or String.starts_with?(text, "/claude") do
           prompt = text |> String.replace(mention, "") |> String.replace("/claude", "") |> String.trim()
-          process_prompt(chat_id, user_id, prompt)
+          dispatch(chat_id, prompt)
         end
 
-      text == "/auth" ->
-        TelegramClaude.AuthFlow.start(chat_id)
-
       true ->
-        process_prompt(chat_id, user_id, text)
+        dispatch(chat_id, text)
     end
   end
 
   defp handle_update(_), do: :ok
 
-  defp process_prompt(_chat_id, _user_id, ""), do: :ok
+  defp dispatch(_chat_id, ""), do: :ok
+  defp dispatch(chat_id, "/auth"), do: TelegramClaude.AuthFlow.start(chat_id)
+  defp dispatch(chat_id, prompt), do: process_prompt(chat_id, prompt)
 
-  defp process_prompt(chat_id, _user_id, prompt) do
+  defp process_prompt(_chat_id, ""), do: :ok
+
+  defp process_prompt(chat_id, prompt) do
     {:ok, msg_id} = TelegramClaude.Telegram.send_message_id(chat_id, "⏳ Processando...")
 
     project_dir = Application.get_env(:telegram_claude, :project_dir, "/app/project")
