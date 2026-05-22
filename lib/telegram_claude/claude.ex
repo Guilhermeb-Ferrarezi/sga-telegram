@@ -7,10 +7,9 @@ defmodule TelegramClaude.Claude do
     claude_bin = System.find_executable("claude") || "/usr/local/bin/claude"
 
     args = [
-      "--print",
+      "-p", prompt,
       "--output-format", "text",
-      "--allowedTools", "all",
-      prompt
+      "--allowedTools", "all"
     ]
 
     Logger.info("Executando claude: #{prompt}")
