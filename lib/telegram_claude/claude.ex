@@ -45,8 +45,8 @@ defmodule TelegramClaude.Claude do
         {:ok, extract_result(buffer)}
 
       {^port, {:exit_status, code}} ->
-        Logger.error("Claude saiu com código #{code}")
-        {:error, "Claude retornou erro (código #{code})"}
+        Logger.error("Claude saiu com código #{code}: #{buffer}")
+        {:error, "```\n#{String.slice(buffer, 0, 800)}\n```"}
     after
       300_000 ->
         Port.close(port)
