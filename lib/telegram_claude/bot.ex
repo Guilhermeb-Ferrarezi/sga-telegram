@@ -82,16 +82,30 @@ defmodule TelegramClaude.Bot do
         prompt
       end
 
-    last_edit_ref = :atomics.new(1, [])
-    :atomics.put(last_edit_ref, 1, :os.system_time(:millisecond))
+    Process.put(:tg_acc_text, "")
+    Process.put(:tg_status, "")
+    Process.put(:tg_last_edit, :os.system_time(:millisecond))
 
-    on_update = fn {:streaming, text} ->
-      now = :os.system_time(:millisecond)
-      if now - :atomics.get(last_edit_ref, 1) > 2000 do
-        :atomics.put(last_edit_ref, 1, now)
-        preview = text |> String.trim() |> String.slice(-800, 800)
-        TelegramClaude.Telegram.edit_message(chat_id, msg_id, "⏳\n#{preview}")
-      end
+    on_update = fn
+      {:chunk, delta} ->
+        acc = Process.get(:tg_acc_text) <> delta
+        Process.put(:tg_acc_text, acc)
+        now = :os.system_time(:millisecond)
+
+        if now - Process.get(:tg_last_edit) > 2000 do
+          Process.put(:tg_last_edit, now)
+          status = Process.get(:tg_status)
+          preview = acc |> String.trim() |> String.slice(-600, 600)
+          status_line = if status != "", do: "🔧 _#{status}_\n\n", else: ""
+          TelegramClaude.Telegram.edit_message(chat_id, msg_id, "⏳ #{status_line}#{preview}")
+        end
+
+      {:status, desc} ->
+        Process.put(:tg_status, desc)
+        Process.put(:tg_last_edit, :os.system_time(:millisecond))
+        acc = Process.get(:tg_acc_text)
+        preview = if acc != "", do: "\n\n#{String.slice(acc, -400, 400)}", else: ""
+        TelegramClaude.Telegram.edit_message(chat_id, msg_id, "🔧 _#{desc}_#{preview}")
     end
 
     case TelegramClaude.Claude.run(full_prompt, project_dir, on_update) do

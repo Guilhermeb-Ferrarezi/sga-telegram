@@ -28,9 +28,14 @@ defmodule TelegramClaude.API.ChatController do
         |> put_resp_header("connection", "keep-alive")
         |> send_chunked(200)
 
-      on_update = fn {:streaming, text} ->
-        event = Jason.encode!(%{type: "streaming", text: text})
-        chunk(conn, "data: #{event}\n\n")
+      on_update = fn
+        {:chunk, delta} ->
+          event = Jason.encode!(%{type: "chunk", text: delta})
+          chunk(conn, "data: #{event}\n\n")
+
+        {:status, desc} ->
+          event = Jason.encode!(%{type: "status", text: desc})
+          chunk(conn, "data: #{event}\n\n")
       end
 
       case TelegramClaude.Claude.run(full_prompt, project_path, on_update) do

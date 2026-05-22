@@ -39,7 +39,8 @@ export const MessageSchema = z.object({
 export type Message = z.infer<typeof MessageSchema>
 
 export const SSEEventSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('streaming'), text: z.string() }),
+  z.object({ type: z.literal('chunk'), text: z.string() }),
+  z.object({ type: z.literal('status'), text: z.string() }),
   z.object({ type: z.literal('done'), text: z.string() }),
   z.object({ type: z.literal('error'), text: z.string() }),
 ])

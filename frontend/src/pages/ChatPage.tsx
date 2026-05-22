@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { PaperPlaneTilt, Trash, ArrowLeft, CircleNotch } from '@phosphor-icons/react'
+import { PaperPlaneTilt, Trash, ArrowLeft, CircleNotch, Wrench } from '@phosphor-icons/react'
 import { api } from '@/lib/api'
 import { ProjectStatusSchema, UserSchema, SSEEventSchema } from '@/schemas'
 import type { Message } from '@/schemas'
@@ -17,6 +17,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
+  const [status, setStatus] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -34,7 +35,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, status])
 
   const clearMutation = useMutation({
     mutationFn: () => api.delete('/api/chat/history'),
@@ -47,9 +48,11 @@ export default function ChatPage() {
 
     setInput('')
     setStreaming(true)
+    setStatus(null)
 
     const userMsg: Message = { id: crypto.randomUUID(), role: 'user', content: prompt }
-    const assistantMsg: Message = { id: crypto.randomUUID(), role: 'assistant', content: '', streaming: true }
+    const assistantMsgId = crypto.randomUUID()
+    const assistantMsg: Message = { id: assistantMsgId, role: 'assistant', content: '', streaming: true }
 
     setMessages((prev) => [...prev, userMsg, assistantMsg])
 
@@ -79,18 +82,31 @@ export default function ChatPage() {
           if (!line.startsWith('data: ')) continue
           try {
             const event = SSEEventSchema.parse(JSON.parse(line.slice(6)))
-            if (event.type === 'streaming' || event.type === 'done') {
+
+            if (event.type === 'chunk') {
               setMessages((prev) =>
                 prev.map((m) =>
-                  m.id === assistantMsg.id
-                    ? { ...m, content: event.text, streaming: event.type === 'streaming' }
+                  m.id === assistantMsgId
+                    ? { ...m, content: m.content + event.text, streaming: true }
+                    : m,
+                ),
+              )
+            } else if (event.type === 'status') {
+              setStatus(event.text)
+            } else if (event.type === 'done') {
+              setStatus(null)
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsgId
+                    ? { ...m, content: event.text || m.content, streaming: false }
                     : m,
                 ),
               )
             } else if (event.type === 'error') {
+              setStatus(null)
               setMessages((prev) =>
                 prev.map((m) =>
-                  m.id === assistantMsg.id
+                  m.id === assistantMsgId
                     ? { ...m, content: `Erro: ${event.text}`, streaming: false }
                     : m,
                 ),
@@ -102,12 +118,14 @@ export default function ChatPage() {
         }
       }
     } catch {
+      setStatus(null)
       setMessages((prev) =>
         prev.map((m) =>
           m.streaming ? { ...m, content: 'Erro ao conectar com o servidor', streaming: false } : m,
         ),
       )
     } finally {
+      setStatus(null)
       setStreaming(false)
       inputRef.current?.focus()
     }
@@ -152,6 +170,14 @@ export default function ChatPage() {
           {messages.map((msg) => (
             <ChatMessage key={msg.id} message={msg} />
           ))}
+
+          {status && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/60 text-xs text-muted-foreground w-fit max-w-[80%] ml-10">
+              <Wrench size={12} className="shrink-0 animate-pulse" />
+              <span className="truncate">{status}</span>
+            </div>
+          )}
+
           <div ref={bottomRef} />
         </div>
       </ScrollArea>
