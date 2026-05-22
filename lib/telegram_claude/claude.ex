@@ -6,20 +6,17 @@ defmodule TelegramClaude.Claude do
   def run(prompt, project_dir) do
     claude_bin = System.find_executable("claude") || "/usr/local/bin/claude"
 
-    args = [
-      "-p", prompt,
-      "--output-format", "text",
-      "--allowedTools", "all"
-    ]
+    cmd = "#{claude_bin} -p \"$CLAUDE_PROMPT\" --output-format text --allowedTools all < /dev/null"
 
     Logger.info("Executando claude: #{prompt}")
 
     opts = [
       cd: project_dir,
-      stderr_to_stdout: true
+      stderr_to_stdout: true,
+      env: [{"CLAUDE_PROMPT", prompt}]
     ]
 
-    case System.cmd(claude_bin, args, opts) do
+    case System.cmd("sh", ["-c", cmd], opts) do
       {output, 0} ->
         {:ok, String.trim(output)}
 
