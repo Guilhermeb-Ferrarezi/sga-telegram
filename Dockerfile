@@ -36,5 +36,6 @@ RUN chmod +x /entrypoint.sh && mkdir -p /app/project /data/npm-global
 ENV NPM_CONFIG_PREFIX=/data/npm-global
 ENV PATH="/data/npm-global/bin:$PATH"
 ENV MIX_ENV=prod
+ENV SHELL=/bin/sh
 
 CMD ["/entrypoint.sh"]
