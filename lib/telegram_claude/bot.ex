@@ -61,16 +61,16 @@ defmodule TelegramClaude.Bot do
   defp process_prompt(_chat_id, _user_id, ""), do: :ok
 
   defp process_prompt(chat_id, _user_id, prompt) do
-    TelegramClaude.Telegram.send_message(chat_id, "⏳ Processando...")
+    {:ok, msg_id} = TelegramClaude.Telegram.send_message_id(chat_id, "⏳ Processando...")
 
     project_dir = Application.get_env(:telegram_claude, :project_dir, "/app/project")
 
     case TelegramClaude.Claude.run(prompt, project_dir) do
       {:ok, response} ->
-        TelegramClaude.Telegram.send_message(chat_id, response)
+        TelegramClaude.Telegram.edit_message(chat_id, msg_id, response)
 
       {:error, reason} ->
-        TelegramClaude.Telegram.send_message(chat_id, "Erro: #{reason}")
+        TelegramClaude.Telegram.edit_message(chat_id, msg_id, "❌ Erro: #{reason}")
     end
   end
 

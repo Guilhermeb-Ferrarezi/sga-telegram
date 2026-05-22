@@ -21,11 +21,37 @@ defmodule TelegramClaude.Telegram do
 
   def send_message(chat_id, text) do
     token = token()
-
-    # Telegram limita mensagens a 4096 chars
     chunks = chunk_text(text, 4096)
 
     Enum.each(chunks, fn chunk ->
+      Req.post("#{@base_url}/bot#{token}/sendMessage",
+        json: %{chat_id: chat_id, text: chunk, parse_mode: "Markdown"}
+      )
+    end)
+  end
+
+  def send_message_id(chat_id, text) do
+    token = token()
+
+    case Req.post("#{@base_url}/bot#{token}/sendMessage",
+           json: %{chat_id: chat_id, text: text}
+         ) do
+      {:ok, %{body: %{"ok" => true, "result" => %{"message_id" => msg_id}}}} -> {:ok, msg_id}
+      _ -> {:error, :send_failed}
+    end
+  end
+
+  def edit_message(chat_id, message_id, text) do
+    token = token()
+    chunks = chunk_text(text, 4096)
+
+    [first | rest] = chunks
+
+    Req.post("#{@base_url}/bot#{token}/editMessageText",
+      json: %{chat_id: chat_id, message_id: message_id, text: first, parse_mode: "Markdown"}
+    )
+
+    Enum.each(rest, fn chunk ->
       Req.post("#{@base_url}/bot#{token}/sendMessage",
         json: %{chat_id: chat_id, text: chunk, parse_mode: "Markdown"}
       )
