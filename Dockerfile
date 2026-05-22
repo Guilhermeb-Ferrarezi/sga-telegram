@@ -17,8 +17,7 @@ RUN MIX_ENV=prod mix compile
 
 FROM elixir:1.18-alpine
 
-RUN apk add --no-cache git nodejs npm && \
-    npm install -g @anthropic-ai/claude-code
+RUN apk add --no-cache git nodejs npm
 
 WORKDIR /app
 
@@ -28,7 +27,12 @@ COPY --from=builder /app/deps /app/deps
 COPY --from=builder /app/lib /app/lib
 COPY --from=builder /app/mix.exs /app/mix.exs
 COPY config config
+COPY entrypoint.sh /entrypoint.sh
 
-RUN mkdir -p /app/project
+RUN chmod +x /entrypoint.sh && mkdir -p /app/project /data/npm-global
 
-CMD ["sh", "-c", "MIX_ENV=prod mix run --no-halt"]
+ENV NPM_CONFIG_PREFIX=/data/npm-global
+ENV PATH="/data/npm-global/bin:$PATH"
+ENV MIX_ENV=prod
+
+CMD ["/entrypoint.sh"]
