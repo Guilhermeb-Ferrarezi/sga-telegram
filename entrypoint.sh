@@ -5,10 +5,15 @@ NPM_GLOBAL=/data/npm-global
 
 export NPM_CONFIG_PREFIX=$NPM_GLOBAL
 export PATH="$NPM_GLOBAL/bin:$PATH"
+export HOME=/home/app
+
+# Corrigir ownership dos volumes (podem ter sido criados como root)
+mkdir -p /home/app/.claude/backups /data/npm-global /app/project
+chown -R app:app /home/app /data/npm-global /app/project 2>/dev/null || true
 
 if [ ! -f "$NPM_GLOBAL/bin/claude" ]; then
   echo "[entrypoint] Instalando @anthropic-ai/claude-code..."
-  npm install -g @anthropic-ai/claude-code
+  su-exec app npm install -g @anthropic-ai/claude-code
   echo "[entrypoint] Claude instalado."
 fi
 
@@ -18,6 +23,7 @@ if [ ! -f /home/app/.claude.json ]; then
   if [ -n "$BACKUP" ]; then
     echo "[entrypoint] Restaurando auth do Claude de $BACKUP"
     cp "$BACKUP" /home/app/.claude.json
+    chown app:app /home/app/.claude.json
   else
     echo "[entrypoint] AVISO: sem auth do Claude. Acesse o terminal e rode 'claude' para fazer login."
   fi
@@ -30,4 +36,4 @@ if [ -f /app/CLAUDE.md ]; then
   echo "[entrypoint] CLAUDE.md injetado em /app/project/"
 fi
 
-exec mix run --no-halt
+exec su-exec app mix run --no-halt

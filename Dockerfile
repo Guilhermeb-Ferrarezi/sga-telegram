@@ -17,7 +17,7 @@ RUN MIX_ENV=prod mix compile
 
 FROM elixir:1.19-alpine
 
-RUN apk add --no-cache git nodejs npm gettext && \
+RUN apk add --no-cache git nodejs npm gettext su-exec && \
     adduser -D -h /home/app -s /bin/sh app
 
 WORKDIR /app
@@ -41,7 +41,5 @@ ENV NPM_CONFIG_PREFIX=/data/npm-global
 ENV PATH="/data/npm-global/bin:$PATH"
 ENV MIX_ENV=prod
 ENV SHELL=/bin/sh
-
-USER app
 
 CMD ["/entrypoint.sh"]
