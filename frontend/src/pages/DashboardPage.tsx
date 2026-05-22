@@ -6,11 +6,17 @@ import RepoCard from '@/components/RepoCard'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { api } from '@/lib/api'
-import { RepoSchema, type Repo } from '@/schemas'
+import { RepoSchema, UserSchema, type Repo } from '@/schemas'
 import { z } from 'zod'
 
 export default function DashboardPage() {
   const [search, setSearch] = useState('')
+
+  const { data: user } = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: async () => UserSchema.parse((await api.get('/api/auth/me')).data),
+    staleTime: 5 * 60 * 1000,
+  })
 
   const { data: repos, isLoading, isError } = useQuery({
     queryKey: ['repos'],
@@ -30,7 +36,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
+      <Navbar user={user} />
 
       <main className="max-w-6xl mx-auto px-4 py-8 w-full flex-1">
         <div className="mb-6 space-y-1">

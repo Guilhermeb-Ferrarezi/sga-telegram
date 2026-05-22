@@ -13,7 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 
 export default function ChatPage() {
   const navigate = useNavigate()
-  
+
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
@@ -51,14 +51,14 @@ export default function ChatPage() {
     const userMsg: Message = { id: crypto.randomUUID(), role: 'user', content: prompt }
     const assistantMsg: Message = { id: crypto.randomUUID(), role: 'assistant', content: '', streaming: true }
 
-    setMessages(prev => [...prev, userMsg, assistantMsg])
+    setMessages((prev) => [...prev, userMsg, assistantMsg])
 
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ prompt, project_path: project?.path }),
+        body: JSON.stringify({ prompt }),
       })
 
       if (!res.ok || !res.body) throw new Error('Falha na requisição')
@@ -80,25 +80,33 @@ export default function ChatPage() {
           try {
             const event = SSEEventSchema.parse(JSON.parse(line.slice(6)))
             if (event.type === 'streaming' || event.type === 'done') {
-              setMessages(prev => prev.map(m =>
-                m.id === assistantMsg.id
-                  ? { ...m, content: event.text, streaming: event.type === 'streaming' }
-                  : m
-              ))
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsg.id
+                    ? { ...m, content: event.text, streaming: event.type === 'streaming' }
+                    : m,
+                ),
+              )
             } else if (event.type === 'error') {
-              setMessages(prev => prev.map(m =>
-                m.id === assistantMsg.id
-                  ? { ...m, content: `❌ ${event.text}`, streaming: false }
-                  : m
-              ))
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsg.id
+                    ? { ...m, content: `Erro: ${event.text}`, streaming: false }
+                    : m,
+                ),
+              )
             }
-          } catch {}
+          } catch {
+            // ignore individual line parse errors
+          }
         }
       }
-    } catch (err) {
-      setMessages(prev => prev.map(m =>
-        m.streaming ? { ...m, content: '❌ Erro ao conectar', streaming: false } : m
-      ))
+    } catch {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.streaming ? { ...m, content: 'Erro ao conectar com o servidor', streaming: false } : m,
+        ),
+      )
     } finally {
       setStreaming(false)
       inputRef.current?.focus()
@@ -115,11 +123,11 @@ export default function ChatPage() {
   return (
     <div className="flex flex-col h-screen bg-background">
       <Navbar user={user}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-1">
           <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
             <ArrowLeft size={18} />
           </Button>
-          <span className="text-sm font-medium text-foreground">
+          <span className="text-sm font-medium text-foreground truncate">
             {project?.full_name ?? 'Sem projeto'}
           </span>
         </div>
@@ -127,7 +135,7 @@ export default function ChatPage() {
           variant="ghost"
           size="icon"
           onClick={() => clearMutation.mutate()}
-          disabled={clearMutation.isPending}
+          disabled={clearMutation.isPending || messages.length === 0}
           title="Limpar histórico"
         >
           <Trash size={18} />
@@ -135,13 +143,13 @@ export default function ChatPage() {
       </Navbar>
 
       <ScrollArea className="flex-1 px-4 py-4">
-        <div className="max-w-3xl mx-auto space-y-4">
+        <div className="max-w-3xl mx-auto space-y-2">
           {messages.length === 0 && (
             <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
               Envie uma mensagem para começar
             </div>
           )}
-          {messages.map(msg => (
+          {messages.map((msg) => (
             <ChatMessage key={msg.id} message={msg} />
           ))}
           <div ref={bottomRef} />
@@ -153,11 +161,12 @@ export default function ChatPage() {
           <Input
             ref={inputRef}
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Mensagem para o Claude..."
             disabled={streaming}
             className="flex-1"
+            autoFocus
           />
           <Button onClick={sendMessage} disabled={streaming || !input.trim()} size="icon">
             {streaming ? (
