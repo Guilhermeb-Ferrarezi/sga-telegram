@@ -17,6 +17,7 @@ defmodule TelegramClaude.Claude do
       "#{claude_bin} -p \"$CLAUDE_PROMPT\" --output-format stream-json --verbose --include-partial-messages --allowedTools all --dangerously-skip-permissions < /dev/null"
 
     Logger.info("Executando claude: #{String.slice(prompt, 0, 100)}")
+    if on_update, do: on_update.({:status, "Pensando..."})
 
     port =
       Port.open({:spawn_executable, "/bin/bash"}, [
@@ -79,14 +80,14 @@ defmodule TelegramClaude.Claude do
          on_update
        )
        when is_list(content) do
-    # Emit status for tool calls
-    Enum.each(content, fn
-      %{"type" => "tool_use", "name" => name, "input" => input} ->
-        if on_update, do: on_update.({:status, tool_description(name, input)})
+    # Emit status for tool calls; after the last tool, signal "Pensando..." again
+    tools = Enum.filter(content, &match?(%{"type" => "tool_use"}, &1))
 
-      _ ->
-        :ok
+    Enum.each(tools, fn %{"name" => name, "input" => input} ->
+      if on_update, do: on_update.({:status, tool_description(name, input)})
     end)
+
+    if tools != [] && on_update, do: on_update.({:status, "Pensando..."})
 
     # Extract text and compute delta
     text =
