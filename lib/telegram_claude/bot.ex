@@ -60,42 +60,50 @@ defmodule TelegramClaude.Bot do
 
   defp dispatch(_chat_id, ""), do: :ok
   defp dispatch(chat_id, "/auth"), do: TelegramClaude.AuthFlow.start(chat_id)
-  defp dispatch(chat_id, prompt), do: process_prompt(chat_id, prompt)
-
-  defp process_prompt(_chat_id, ""), do: :ok
+  defp dispatch(chat_id, "/limpar") do
+    TelegramClaude.History.clear(chat_id)
+    TelegramClaude.Telegram.send_message(chat_id, "🗑 Histórico apagado.")
+  end
+  defp dispatch(chat_id, prompt), do: Task.start(fn -> process_prompt(chat_id, prompt) end)
 
   defp process_prompt(chat_id, prompt) do
+    TelegramClaude.History.add(chat_id, :user, prompt)
+
     {:ok, msg_id} = TelegramClaude.Telegram.send_message_id(chat_id, "⏳ Iniciando...")
 
     project_dir = Application.get_env(:telegram_claude, :project_dir, "/app/project")
 
-    last_edit = :os.system_time(:millisecond)
+    history_text = TelegramClaude.History.format(chat_id)
+
+    full_prompt =
+      if history_text != "" do
+        "Histórico da conversa:\n#{history_text}\n\nNova mensagem do usuário: #{prompt}"
+      else
+        prompt
+      end
+
     last_edit_ref = :atomics.new(1, [])
-    :atomics.put(last_edit_ref, 1, last_edit)
+    :atomics.put(last_edit_ref, 1, :os.system_time(:millisecond))
 
     on_update = fn
       {:thinking, text} ->
         now = :os.system_time(:millisecond)
-        last = :atomics.get(last_edit_ref, 1)
-
-        if now - last > 2000 do
+        if now - :atomics.get(last_edit_ref, 1) > 2000 do
           :atomics.put(last_edit_ref, 1, now)
-          short = text |> String.slice(0, 200) |> String.trim()
-          TelegramClaude.Telegram.edit_message(chat_id, msg_id, "💭 #{short}")
+          TelegramClaude.Telegram.edit_message(chat_id, msg_id, "💭 #{String.slice(text, 0, 200)}")
         end
 
       {:tool, tool} ->
         now = :os.system_time(:millisecond)
-        last = :atomics.get(last_edit_ref, 1)
-
-        if now - last > 1000 do
+        if now - :atomics.get(last_edit_ref, 1) > 1000 do
           :atomics.put(last_edit_ref, 1, now)
           TelegramClaude.Telegram.edit_message(chat_id, msg_id, "🔧 Usando: `#{tool}`")
         end
     end
 
-    case TelegramClaude.Claude.run(prompt, project_dir, on_update) do
+    case TelegramClaude.Claude.run(full_prompt, project_dir, on_update) do
       {:ok, response} ->
+        TelegramClaude.History.add(chat_id, :assistant, response)
         TelegramClaude.Telegram.edit_message(chat_id, msg_id, response)
 
       {:error, reason} ->

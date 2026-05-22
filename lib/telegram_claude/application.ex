@@ -4,6 +4,7 @@ defmodule TelegramClaude.Application do
   @impl true
   def start(_type, _args) do
     children = [
+      TelegramClaude.History,
       TelegramClaude.Bot
     ]
 
