@@ -1,4 +1,4 @@
-FROM elixir:1.18-alpine AS builder
+FROM elixir:1.19-alpine AS builder
 
 RUN apk add --no-cache git nodejs npm
 
@@ -15,7 +15,7 @@ COPY lib lib
 
 RUN MIX_ENV=prod mix compile
 
-FROM elixir:1.18-alpine
+FROM elixir:1.19-alpine
 
 RUN apk add --no-cache git nodejs npm
 
