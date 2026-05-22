@@ -17,7 +17,7 @@ RUN MIX_ENV=prod mix compile
 
 FROM elixir:1.19-alpine
 
-RUN apk add --no-cache git nodejs npm
+RUN apk add --no-cache git nodejs npm gettext
 
 WORKDIR /app
 
@@ -29,6 +29,7 @@ COPY --from=builder /app/mix.exs /app/mix.exs
 COPY --from=builder /app/mix.lock /app/mix.lock
 COPY config config
 COPY entrypoint.sh /entrypoint.sh
+COPY CLAUDE.md /app/CLAUDE.md
 
 RUN chmod +x /entrypoint.sh && mkdir -p /app/project /data/npm-global
 

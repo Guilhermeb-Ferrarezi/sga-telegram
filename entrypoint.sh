@@ -23,4 +23,11 @@ if [ ! -f /root/.claude.json ]; then
   fi
 fi
 
+# Injetar CLAUDE.md com variáveis do .env substituídas
+if [ -f /app/CLAUDE.md ]; then
+  export $(grep -v '^#' /app/project/.env 2>/dev/null | xargs) 2>/dev/null || true
+  envsubst < /app/CLAUDE.md > /app/project/CLAUDE.md
+  echo "[entrypoint] CLAUDE.md injetado em /app/project/"
+fi
+
 exec mix run --no-halt
