@@ -51,6 +51,9 @@ defmodule TelegramClaude.Bot do
           process_prompt(chat_id, user_id, prompt)
         end
 
+      text == "/auth" ->
+        TelegramClaude.AuthFlow.start(chat_id)
+
       true ->
         process_prompt(chat_id, user_id, text)
     end
