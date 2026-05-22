@@ -9,7 +9,7 @@ defmodule TelegramClaude.Claude do
       [{"SHELL", "/bin/sh"}, {"CLAUDE_PROMPT", prompt} | project_env]
       |> Enum.map(fn {k, v} -> {String.to_charlist(k), String.to_charlist(v)} end)
 
-    cmd = "#{claude_bin} -p \"$CLAUDE_PROMPT\" --output-format stream-json --allowedTools all < /dev/null"
+    cmd = "#{claude_bin} -p \"$CLAUDE_PROMPT\" --output-format text --allowedTools all < /dev/null"
 
     Logger.info("Executando claude: #{prompt}")
 
@@ -42,7 +42,7 @@ defmodule TelegramClaude.Claude do
         stream_output(port, on_update, rest)
 
       {^port, {:exit_status, 0}} ->
-        {:ok, extract_result(buffer)}
+        {:ok, String.trim(buffer)}
 
       {^port, {:exit_status, code}} ->
         Logger.error("Claude saiu com código #{code}: #{buffer}")
