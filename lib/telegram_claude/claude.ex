@@ -5,8 +5,16 @@ defmodule TelegramClaude.Claude do
     claude_bin = System.find_executable("claude") || "/usr/local/bin/claude"
     project_env = load_dotenv(project_dir)
 
+    current_path = System.get_env("PATH", "/usr/local/bin:/usr/bin:/bin")
+
     env =
-      [{"SHELL", "/bin/sh"}, {"CLAUDE_PROMPT", prompt} | project_env]
+      [
+        {"SHELL", "/bin/sh"},
+        {"PATH", current_path},
+        {"HOME", System.get_env("HOME", "/root")},
+        {"CLAUDE_PROMPT", prompt}
+        | project_env
+      ]
       |> Enum.map(fn {k, v} -> {String.to_charlist(k), String.to_charlist(v)} end)
 
     cmd = "#{claude_bin} -p \"$CLAUDE_PROMPT\" --output-format text --allowedTools all < /dev/null"
