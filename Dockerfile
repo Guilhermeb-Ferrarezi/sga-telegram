@@ -6,9 +6,9 @@ WORKDIR /app
 
 RUN mix local.hex --force && mix local.rebar --force
 
-COPY mix.exs mix.lock* ./
-RUN MIX_ENV=prod mix deps.get
-RUN MIX_ENV=prod mix deps.compile
+COPY mix.exs mix.lock ./
+RUN mix deps.get
+RUN mix deps.compile
 
 COPY config config
 COPY lib lib
