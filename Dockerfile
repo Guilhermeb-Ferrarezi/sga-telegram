@@ -15,6 +15,18 @@ COPY lib lib
 
 RUN MIX_ENV=prod mix compile
 
+# Frontend build
+FROM node:22-alpine AS frontend-builder
+
+WORKDIR /frontend
+
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm ci
+
+COPY frontend/ ./
+RUN npm run build
+
+# Runtime
 FROM elixir:1.19-alpine
 
 RUN apk add --no-cache git nodejs npm gettext su-exec bash && \
@@ -31,6 +43,8 @@ COPY --from=builder /app/mix.lock /app/mix.lock
 COPY config config
 COPY entrypoint.sh /entrypoint.sh
 COPY CLAUDE.md /app/CLAUDE.md
+
+COPY --from=frontend-builder /frontend/dist /app/priv/static
 
 RUN chmod +x /entrypoint.sh && \
     mkdir -p /app/project /data/npm-global /home/app/.claude/backups && \

@@ -22,7 +22,10 @@ defmodule TelegramClaude.MixProject do
     [
       {:telegex, "~> 1.0"},
       {:jason, "~> 1.4"},
-      {:req, "~> 0.5"}
+      {:req, "~> 0.5"},
+      {:bandit, "~> 1.5"},
+      {:plug, "~> 1.16"},
+      {:plug_crypto, "~> 2.1"}
     ]
   end
 end
