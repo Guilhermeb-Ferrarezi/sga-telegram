@@ -1,12 +1,15 @@
 Gera um relatório de standup diário com base na atividade recente do repositório.
 
-**Argumento:** `$ARGUMENTS` (opcional — seu nome ou @usuario do git. Se vazio, usa todos os autores)
+**Argumento:** `$ARGUMENTS` (opcional — seu nome ou @usuario do git, ou `--copy` para formatar pronto para colar)
+- Exemplos: `guilherme`, `--copy`, `guilherme --copy`
+- `--copy`: formata o output como texto puro (sem markdown) pronto para colar no Slack/Discord
 
 Passos:
 1. Execute `git log --since="yesterday" --oneline --author="$ARGUMENTS"` (ou sem `--author` se vazio) para pegar os commits das últimas 24h. Se não houver commits de ontem, expanda para os últimos 2 dias.
 2. Execute `git diff --stat HEAD~5..HEAD` para ter uma noção do volume de mudanças.
 3. Verifique se há PRs abertos com `gh pr list --author="$ARGUMENTS"` (se `gh` disponível).
-4. Monte o relatório no formato de standup:
+4. Verifique o status dos serviços no Easypanel para mencionar se houve algum deploy ou incidente.
+5. Monte o relatório no formato de standup:
 
 ---
 ## Standup — [data de hoje]
