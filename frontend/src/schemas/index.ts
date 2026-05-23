@@ -35,6 +35,7 @@ export const MessageSchema = z.object({
   content: z.string(),
   streaming: z.boolean().optional(),
   createdAt: z.number().optional(),
+  imagePreview: z.string().optional(),
 })
 
 export const HistoryResponseSchema = z.array(MessageSchema)

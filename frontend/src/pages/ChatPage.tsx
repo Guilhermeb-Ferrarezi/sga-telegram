@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { PaperPlaneTilt, Trash, ArrowLeft, Wrench, Stop, ArrowDown, MagnifyingGlass, X, DownloadSimple, Question, FileArrowUp, ArrowUp, Rows, TextAa, ChartBar, Bell, BellSlash, Eye, EyeSlash, BookOpen } from '@phosphor-icons/react'
+import { PaperPlaneTilt, Trash, ArrowLeft, Wrench, Stop, ArrowDown, MagnifyingGlass, X, DownloadSimple, Question, FileArrowUp, ArrowUp, Rows, TextAa, ChartBar, Bell, BellSlash, Eye, EyeSlash, BookOpen, Image } from '@phosphor-icons/react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { api } from '@/lib/api'
@@ -45,10 +45,12 @@ export default function ChatPage() {
   const [dragging, setDragging] = useState(false)
   const [inputHistory, setInputHistory] = useState<string[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
+  const [attachedImage, setAttachedImage] = useState<{ preview: string; serverPath: string | null } | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
 
   const { data: user } = useQuery({
@@ -173,6 +175,10 @@ export default function ChatPage() {
     setDragging(false)
     const file = e.dataTransfer.files[0]
     if (!file) return
+    if (file.type.startsWith('image/')) {
+      handleImageDrop(file)
+      return
+    }
     const text = await file.text()
     const label = `\`\`\`\n// ${file.name}\n${text}\n\`\`\``
     setInput((prev) => (prev ? `${prev}\n\n${label}` : label))
@@ -299,18 +305,23 @@ export default function ChatPage() {
 
   async function sendMessage(promptOverride?: string) {
     const prompt = (promptOverride ?? input).trim()
-    if (!prompt || streaming) return
+    if ((!prompt && !attachedImage) || streaming) return
+
+    const imagePath = attachedImage?.serverPath ?? null
+    const imagePreview = attachedImage?.preview ?? null
 
     if (!promptOverride) {
       setInputHistory((prev) => [prompt, ...prev.slice(0, 49)])
       setHistoryIndex(-1)
       setInput('')
     }
+    removeAttachedImage()
     setStreaming(true)
     setStatus(null)
 
     const now = Date.now()
-    const userMsg: Message = { id: crypto.randomUUID(), role: 'user', content: prompt, createdAt: now }
+    const userContent = prompt || '_(imagem)_'
+    const userMsg: Message = { id: crypto.randomUUID(), role: 'user', content: userContent, createdAt: now, imagePreview: imagePreview ?? undefined }
     const assistantMsgId = crypto.randomUUID()
     const assistantMsg: Message = { id: assistantMsgId, role: 'assistant', content: '', streaming: true, createdAt: now }
 
@@ -325,7 +336,7 @@ export default function ChatPage() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         signal: controller.signal,
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt: userContent, ...(imagePath ? { image_path: imagePath } : {}) }),
       })
 
       if (!res.ok || !res.body) throw new Error('Falha na requisição')
@@ -439,6 +450,37 @@ export default function ChatPage() {
   function reuseMessage(content: string) {
     setInput(content)
     inputRef.current?.focus()
+  }
+
+  async function uploadImageFile(file: File) {
+    if (!file.type.startsWith('image/')) return
+    const preview = URL.createObjectURL(file)
+    setAttachedImage({ preview, serverPath: null })
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch('/api/upload', { method: 'POST', credentials: 'include', body: form })
+      const data = await res.json()
+      if (data.path) setAttachedImage({ preview, serverPath: data.path })
+    } catch {
+      setAttachedImage(null)
+    }
+  }
+
+  function handleImagePaste(e: React.ClipboardEvent) {
+    const item = Array.from(e.clipboardData.items).find((i) => i.type.startsWith('image/'))
+    if (!item) return
+    const file = item.getAsFile()
+    if (file) { e.preventDefault(); uploadImageFile(file) }
+  }
+
+  function handleImageDrop(file: File) {
+    uploadImageFile(file)
+  }
+
+  function removeAttachedImage() {
+    if (attachedImage) URL.revokeObjectURL(attachedImage.preview)
+    setAttachedImage(null)
   }
 
   return (
@@ -762,7 +804,34 @@ export default function ChatPage() {
               {previewMode ? <EyeSlash size={15} /> : <Eye size={15} />}
             </button>
           </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImageFile(f); e.target.value = '' }}
+          />
           <div className="flex-1 flex flex-col gap-1">
+            {attachedImage && (
+              <div className="relative w-fit">
+                <img
+                  src={attachedImage.preview}
+                  alt="anexo"
+                  className="max-h-32 max-w-xs rounded-md border border-border object-contain"
+                />
+                {attachedImage.serverPath === null && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/60 rounded-md text-xs text-muted-foreground">
+                    enviando...
+                  </div>
+                )}
+                <button
+                  onClick={removeAttachedImage}
+                  className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            )}
             {previewMode ? (
               <div
                 onClick={() => setPreviewMode(false)}
@@ -777,7 +846,8 @@ export default function ChatPage() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               onInput={handleInput}
-              placeholder="Mensagem para o Claude..."
+              onPaste={handleImagePaste}
+              placeholder="Mensagem para o Claude... (Cole uma imagem com Ctrl+V)"
               disabled={streaming}
               rows={1}
               autoFocus
@@ -791,12 +861,22 @@ export default function ChatPage() {
               </span>
             )}
           </div>
+          <div className="flex flex-col gap-1 mb-1 shrink-0">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={streaming}
+              className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors p-0.5"
+              title="Anexar imagem"
+            >
+              <Image size={18} />
+            </button>
+          </div>
           {streaming ? (
             <Button onClick={stopStreaming} size="icon" variant="destructive" title="Parar geração">
               <Stop size={18} weight="fill" />
             </Button>
           ) : (
-            <Button onClick={() => { setPreviewMode(false); sendMessage() }} disabled={!input.trim()} size="icon">
+            <Button onClick={() => { setPreviewMode(false); sendMessage() }} disabled={!input.trim() && !attachedImage} size="icon">
               <PaperPlaneTilt size={18} weight="fill" />
             </Button>
           )}

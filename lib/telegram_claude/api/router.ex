@@ -11,12 +11,13 @@ defmodule TelegramClaude.API.Router do
 
   plug :match
   plug Plug.Parsers,
-    parsers: [:json],
-    pass: ["application/json"],
-    json_decoder: Jason
+    parsers: [:json, :multipart],
+    pass: ["application/json", "multipart/form-data"],
+    json_decoder: Jason,
+    multipart_to_params: true
   plug :dispatch
 
-  alias TelegramClaude.API.{AuthController, RepoController, ChatController}
+  alias TelegramClaude.API.{AuthController, RepoController, ChatController, UploadController}
 
   # Auth
   get "/api/auth/github", do: AuthController.github_redirect(conn, conn.query_params)
@@ -28,6 +29,9 @@ defmodule TelegramClaude.API.Router do
   get "/api/repos", do: RepoController.list(conn, conn.query_params)
   post "/api/project/use", do: RepoController.use_project(conn, conn.body_params)
   get "/api/project", do: RepoController.current_project(conn, %{})
+
+  # Upload
+  post "/api/upload", do: UploadController.upload(conn, conn.body_params)
 
   # Chat
   post "/api/chat", do: ChatController.stream(conn, conn.body_params)

@@ -128,8 +128,15 @@ export default function ChatMessage({ message, onReuse, onRetry, onQuote, onPin,
           highlight && message.content.toLowerCase().includes(highlight.toLowerCase()) && 'ring-2 ring-yellow-400/60',
         )}
       >
+        {isUser && message.imagePreview && (
+          <img
+            src={message.imagePreview}
+            alt="imagem anexada"
+            className="max-h-48 max-w-xs rounded-lg mb-2 object-contain"
+          />
+        )}
         {isUser ? (
-          <HighlightText text={message.content} query={highlight} />
+          message.content !== '_(imagem)_' ? <HighlightText text={message.content} query={highlight} /> : null
         ) : message.streaming && message.content === '' ? (
           <div className="flex items-center gap-1 py-0.5">
             <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '0ms' }} />

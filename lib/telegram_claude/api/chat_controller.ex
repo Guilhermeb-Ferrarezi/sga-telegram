@@ -8,16 +8,25 @@ defmodule TelegramClaude.API.ChatController do
       project_path = Map.get(params, "project_path") ||
         Application.get_env(:telegram_claude, :project_dir, "/app/project")
 
+      image_path = Map.get(params, "image_path")
+
       chat_id = "web_#{session["login"]}"
       TelegramClaude.History.add(chat_id, :user, prompt)
 
       history_text = TelegramClaude.History.format(chat_id)
 
-      full_prompt =
+      base_prompt =
         if history_text != "" do
           "Histórico da conversa:\n#{history_text}\n\nNova mensagem do usuário: #{prompt}"
         else
           prompt
+        end
+
+      full_prompt =
+        if is_binary(image_path) and image_path != "" do
+          base_prompt <> "\n\n[O usuário anexou uma imagem. Caminho no servidor: #{image_path}. Use a ferramenta Read para visualizar e analisar a imagem antes de responder.]"
+        else
+          base_prompt
         end
 
       conn =
