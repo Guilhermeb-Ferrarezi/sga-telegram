@@ -1,4 +1,5 @@
-import { User, Robot } from '@phosphor-icons/react'
+import { useState } from 'react'
+import { User, Robot, Copy, Check, ArrowCounterClockwise, ArrowClockwise, Quotes, Star, Code } from '@phosphor-icons/react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -34,54 +35,134 @@ SyntaxHighlighter.registerLanguage('dockerfile', docker)
 import { cn } from '@/lib/utils'
 import type { Message } from '@/schemas'
 
-interface ChatMessageProps {
-  message: Message
+function formatTime(ts: number): string {
+  const date = new Date(ts)
+  const now = new Date()
+  const isToday = date.toDateString() === now.toDateString()
+  const time = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  if (isToday) return time
+  const day = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+  return `${day} ${time}`
 }
 
-export default function ChatMessage({ message }: ChatMessageProps) {
-  const isUser = message.role === 'user'
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+
+  async function copy() {
+    await navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
-    <div className={cn('flex gap-3', isUser && 'flex-row-reverse')}>
+    <button
+      onClick={copy}
+      className="absolute top-2 right-2 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity bg-background/20 hover:bg-background/40 text-muted-foreground hover:text-foreground"
+      title="Copiar código"
+    >
+      {copied ? <Check size={13} /> : <Copy size={13} />}
+    </button>
+  )
+}
+
+function HighlightText({ text, query }: { text: string; query: string }) {
+  if (!query.trim()) return <>{text}</>
+  const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'))
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.toLowerCase() === query.toLowerCase() ? (
+          <mark key={i} className="bg-yellow-300/80 text-foreground rounded-sm px-0.5">{part}</mark>
+        ) : (
+          part
+        )
+      )}
+    </>
+  )
+}
+
+interface ChatMessageProps {
+  message: Message
+  onReuse?: (content: string) => void
+  onRetry?: (msgId: string) => void
+  onQuote?: (content: string) => void
+  onPin?: (msgId: string) => void
+  pinned?: boolean
+  highlight?: string
+  compact?: boolean
+  active?: boolean
+}
+
+export default function ChatMessage({ message, onReuse, onRetry, onQuote, onPin, pinned = false, highlight = '', compact = false, active = false }: ChatMessageProps) {
+  const isUser = message.role === 'user'
+  const isError = !isUser && (message.content.startsWith('Erro:') || message.content === 'Erro ao conectar com o servidor')
+  const [msgCopied, setMsgCopied] = useState(false)
+  const [rawMode, setRawMode] = useState(false)
+
+  async function copyMessage() {
+    await navigator.clipboard.writeText(message.content)
+    setMsgCopied(true)
+    setTimeout(() => setMsgCopied(false), 2000)
+  }
+
+  return (
+    <div data-msg-id={message.id} className={cn('flex gap-3 group/msg', isUser && 'flex-row-reverse', compact && 'gap-2', active && 'bg-yellow-400/10 rounded-xl px-1 -mx-1', pinned && 'bg-primary/5 rounded-xl px-1 -mx-1')}>
       <div
         className={cn(
-          'w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5',
+          'rounded-full flex items-center justify-center shrink-0 mt-0.5',
+          compact ? 'w-5 h-5' : 'w-7 h-7',
           isUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground',
         )}
       >
-        {isUser ? <User size={14} weight="fill" /> : <Robot size={14} weight="fill" />}
+        {isUser ? <User size={compact ? 10 : 14} weight="fill" /> : <Robot size={compact ? 10 : 14} weight="fill" />}
       </div>
 
+      <div className={cn('flex flex-col', compact ? 'gap-0.5' : 'gap-1', isUser ? 'items-end' : 'items-start')}>
       <div
         className={cn(
-          'max-w-[80%] rounded-xl px-4 py-2.5 text-sm leading-relaxed break-words',
+          'max-w-[80%] rounded-xl break-words',
+          compact ? 'px-3 py-1.5 text-xs leading-snug' : 'px-4 py-2.5 text-sm leading-relaxed',
           isUser
             ? 'bg-primary text-primary-foreground rounded-tr-sm whitespace-pre-wrap'
             : 'bg-muted text-foreground rounded-tl-sm',
+          highlight && message.content.toLowerCase().includes(highlight.toLowerCase()) && 'ring-2 ring-yellow-400/60',
         )}
       >
         {isUser ? (
-          message.content
+          <HighlightText text={message.content} query={highlight} />
+        ) : message.streaming && message.content === '' ? (
+          <div className="flex items-center gap-1 py-0.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '0ms' }} />
+            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '150ms' }} />
+            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '300ms' }} />
+          </div>
+        ) : rawMode ? (
+          <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed">{message.content}</pre>
         ) : (
           <div className={cn(message.streaming && 'after:content-["▋"] after:animate-pulse after:ml-0.5 after:inline-block')}>
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
+
                 code({ className, children, ...props }) {
                   const match = /language-(\w+)/.exec(className || '')
                   const isBlock = !!match || String(children).includes('\n')
 
                   if (isBlock) {
+                    const code = String(children).replace(/\n$/, '')
                     return (
-                      <SyntaxHighlighter
-                        style={oneDark}
-                        language={match ? match[1] : 'text'}
-                        PreTag="div"
-                        className="!rounded-lg !text-xs !my-2"
-                        {...(props as object)}
-                      >
-                        {String(children).replace(/\n$/, '')}
-                      </SyntaxHighlighter>
+                      <div className="relative group">
+                        <CopyButton text={code} />
+                        <SyntaxHighlighter
+                          style={oneDark}
+                          language={match ? match[1] : 'text'}
+                          PreTag="div"
+                          className="!rounded-lg !text-xs !my-2"
+                          {...(props as object)}
+                        >
+                          {code}
+                        </SyntaxHighlighter>
+                      </div>
                     )
                   }
 
@@ -163,6 +244,80 @@ export default function ChatMessage({ message }: ChatMessageProps) {
             </ReactMarkdown>
           </div>
         )}
+      </div>
+
+      {message.createdAt && !message.streaming && (
+        <span className="text-[10px] text-muted-foreground/60 px-1">
+          {formatTime(message.createdAt)}
+        </span>
+      )}
+
+      {!message.streaming && (
+        <div className="flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity">
+          {onPin && (
+            <button
+              onClick={() => onPin(message.id)}
+              className={cn('flex items-center gap-1 text-xs px-1 py-0.5 rounded', pinned ? 'text-yellow-500 hover:text-yellow-600' : 'text-muted-foreground hover:text-foreground')}
+              title={pinned ? 'Desafixar' : 'Fixar mensagem'}
+            >
+              <Star size={12} weight={pinned ? 'fill' : 'regular'} />
+              {pinned ? 'Fixada' : 'Fixar'}
+            </button>
+          )}
+          {!isUser && !message.streaming && (
+            <button
+              onClick={() => setRawMode((v) => !v)}
+              className={cn('flex items-center gap-1 text-xs px-1 py-0.5 rounded', rawMode ? 'text-primary' : 'text-muted-foreground hover:text-foreground')}
+              title={rawMode ? 'Ver renderizado' : 'Ver markdown bruto'}
+            >
+              <Code size={12} />
+              {rawMode ? 'Renderizado' : 'Raw'}
+            </button>
+          )}
+          {onQuote && (
+            <button
+              onClick={() => onQuote(message.content)}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-1 py-0.5 rounded"
+              title="Citar mensagem"
+            >
+              <Quotes size={12} />
+              Citar
+            </button>
+          )}
+          {isUser && onReuse && (
+            <button
+              onClick={() => onReuse(message.content)}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-1 py-0.5 rounded"
+              title="Reutilizar mensagem"
+            >
+              <ArrowCounterClockwise size={12} />
+              Editar
+            </button>
+          )}
+          {!isUser && (
+            <>
+              {isError && onRetry && (
+                <button
+                  onClick={() => onRetry(message.id)}
+                  className="flex items-center gap-1 text-xs text-destructive hover:text-destructive/80 px-1 py-0.5 rounded"
+                  title="Tentar novamente"
+                >
+                  <ArrowClockwise size={12} />
+                  Tentar novamente
+                </button>
+              )}
+              <button
+                onClick={copyMessage}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-1 py-0.5 rounded"
+                title="Copiar mensagem"
+              >
+                {msgCopied ? <Check size={12} /> : <Copy size={12} />}
+                {msgCopied ? 'Copiado' : 'Copiar'}
+              </button>
+            </>
+          )}
+        </div>
+      )}
       </div>
     </div>
   )

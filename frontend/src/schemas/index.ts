@@ -34,6 +34,7 @@ export const MessageSchema = z.object({
   role: z.enum(['user', 'assistant']),
   content: z.string(),
   streaming: z.boolean().optional(),
+  createdAt: z.number().optional(),
 })
 
 export const HistoryResponseSchema = z.array(MessageSchema)

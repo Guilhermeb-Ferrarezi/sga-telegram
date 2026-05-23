@@ -1,8 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { ChatCircle, SignOut } from '@phosphor-icons/react'
+import { ChatCircle, SignOut, Sun, Moon } from '@phosphor-icons/react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { useTheme } from '@/lib/useTheme'
 import type { User } from '@/schemas'
 
 interface NavbarProps {
@@ -12,6 +13,7 @@ interface NavbarProps {
 
 export default function Navbar({ user, children }: NavbarProps) {
   const queryClient = useQueryClient()
+  const { theme, toggle } = useTheme()
 
   function handleSignOut() {
     queryClient.clear()
@@ -45,6 +47,9 @@ export default function Navbar({ user, children }: NavbarProps) {
               <Separator orientation="vertical" className="h-5" />
             </>
           )}
+          <Button variant="ghost" size="icon" onClick={toggle} title={theme === 'dark' ? 'Tema claro' : 'Tema escuro'}>
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </Button>
           <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sair">
             <SignOut size={18} />
           </Button>
