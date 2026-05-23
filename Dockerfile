@@ -28,6 +28,7 @@ RUN npm install && npm run build
 FROM elixir:1.19-alpine
 
 RUN apk add --no-cache git nodejs npm gettext su-exec bash && \
+    npm install -g wrangler && \
     adduser -D -h /home/app -s /bin/bash app
 
 WORKDIR /app
