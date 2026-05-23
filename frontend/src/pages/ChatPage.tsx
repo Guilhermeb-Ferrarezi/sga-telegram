@@ -588,7 +588,7 @@ export default function ChatPage() {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className="flex-1 overflow-y-auto px-4 py-4 relative"
+        className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 relative"
         style={{ fontSize }}
       >
         {dragging && (

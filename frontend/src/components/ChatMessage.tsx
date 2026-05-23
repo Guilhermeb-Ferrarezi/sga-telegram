@@ -120,7 +120,7 @@ export default function ChatMessage({ message, onReuse, onRetry, onQuote, onPin,
       <div className={cn('flex flex-col', compact ? 'gap-0.5' : 'gap-1', isUser ? 'items-end' : 'items-start')}>
       <div
         className={cn(
-          'max-w-[80%] rounded-xl break-words',
+          'max-w-[80%] min-w-0 rounded-xl break-words overflow-hidden',
           compact ? 'px-3 py-1.5 text-xs leading-snug' : 'px-4 py-2.5 text-sm leading-relaxed',
           isUser
             ? 'bg-primary text-primary-foreground rounded-tr-sm whitespace-pre-wrap'
@@ -151,13 +151,14 @@ export default function ChatMessage({ message, onReuse, onRetry, onQuote, onPin,
                   if (isBlock) {
                     const code = String(children).replace(/\n$/, '')
                     return (
-                      <div className="relative group">
+                      <div className="relative group max-w-full overflow-x-auto">
                         <CopyButton text={code} />
                         <SyntaxHighlighter
                           style={oneDark}
                           language={match ? match[1] : 'text'}
                           PreTag="div"
                           className="!rounded-lg !text-xs !my-2"
+                          customStyle={{ overflowX: 'auto', maxWidth: '100%', wordBreak: 'normal', whiteSpace: 'pre' }}
                           {...(props as object)}
                         >
                           {code}
